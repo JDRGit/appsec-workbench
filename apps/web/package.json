@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "deploy:cloudflare": "npm run build && node scripts/deploy-cloudflare.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

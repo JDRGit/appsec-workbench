@@ -76,6 +76,7 @@ That keeps remediation history intact while still letting the product deduplicat
 
 - [`apps/api`](./apps/api): NestJS + Prisma API slice with a live `GET /api/findings` endpoint
 - [`apps/web`](./apps/web): local React + Vite prototype for the product direction
+- [`docs/cloudflare-pages.md`](./docs/cloudflare-pages.md): Cloudflare Pages setup for the frontend prototype
 - [`render.yaml`](./render.yaml): Render Blueprint for the current hosted prototype shape
 - [`prisma/schema.prisma`](./prisma/schema.prisma): core database schema for the MVP domain
 - [`docs/architecture.md`](./docs/architecture.md): system boundaries, lifecycle, and modeling notes
@@ -95,6 +96,19 @@ The repository now includes a browser preview of the product direction under `ap
 6. Open the local URL printed by Vite, usually `http://127.0.0.1:5173` in dev mode.
 
 The preview is still product-focused, but the `Findings` screen now attempts a live call to the NestJS API and falls back to local demo data if the API is not running.
+
+## Cloudflare Pages deployment
+
+For a no-credit-card hosting path, the frontend can be deployed from [`apps/web`](./apps/web) to Cloudflare Pages.
+
+- Git integration settings are documented in [`docs/cloudflare-pages.md`](./docs/cloudflare-pages.md).
+- The frontend now includes a Cloudflare-specific direct-upload script:
+
+```bash
+CLOUDFLARE_PAGES_PROJECT_NAME=appsec-workbench-web npm run deploy:cloudflare:web
+```
+
+- React Router fallback is handled by [`apps/web/public/_redirects`](./apps/web/public/_redirects).
 
 ## Render deployment
 
