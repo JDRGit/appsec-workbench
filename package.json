@@ -9,7 +9,6 @@
     "dev:web": "npm --prefix apps/web run dev",
     "build:api": "npm --prefix apps/api run build",
     "build:web": "npm --prefix apps/web run build",
-    "deploy:cloudflare:web": "npm --prefix apps/web run deploy:cloudflare",
     "deploy:netlify:web": "npm --prefix apps/web run deploy:netlify",
     "deploy:netlify:web:prod": "npm --prefix apps/web run deploy:netlify:prod",
     "db:setup:api": "npm --prefix apps/api run db:setup",

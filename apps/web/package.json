@@ -7,7 +7,6 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "deploy:cloudflare": "npm run build && node scripts/deploy-cloudflare.mjs",
     "deploy:netlify": "npm run build && npx netlify deploy --dir=dist",
     "deploy:netlify:prod": "npm run build && npx netlify deploy --dir=dist --prod"
   },

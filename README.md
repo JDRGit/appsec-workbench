@@ -1,175 +1,241 @@
 # AppSec Workbench
 
-AppSec Workbench is an internal application security operations platform for ingesting Semgrep, Gitleaks, and Trivy scan artifacts, normalizing them into one workflow, mapping findings to OWASP ASVS 5.0.0, and helping teams triage, assign, suppress, remediate, and report on security work.
+[Live demo](https://appsec-workbench.netlify.app)
 
-This repository is the foundation for an MVP-first monorepo. The initial commit focuses on the product's hardest part first: a durable domain model, a Prisma schema that preserves scan history cleanly, and planning docs that keep the implementation grounded in a real AppSec operating model.
+AppSec Workbench is a security operations product concept for software teams. It takes raw findings from scanners like Semgrep, Gitleaks, and Trivy, turns them into one shared workflow, and helps teams decide what to fix first, who owns it, and how it maps to OWASP ASVS 5.0.0.
 
-## Why this project exists
+In plain language: this project is meant to feel like the kind of internal security dashboard an engineering organization would actually use, not just a page that shows scanner output.
 
-Most scanner demos stop at "run a tool, print a report." Real AppSec work starts after that:
+## What this project is
 
-- ingesting heterogeneous scanner outputs
-- normalizing them into a stable contract
-- deduplicating repeated findings without losing occurrence history
-- mapping issues to a recognized control framework
-- giving engineering and security teams a workflow they can actually use
+- A portfolio-grade application security workflow product
+- A React frontend prototype with a live multi-page experience
+- A local NestJS API slice for findings data and workflow actions
+- A foundation for a larger platform with ingestion, normalization, triage, and reporting
 
-AppSec Workbench is designed to demonstrate all of those concerns in one product.
+## Live status
 
-## Product scope
+- Public frontend: [https://appsec-workbench.netlify.app](https://appsec-workbench.netlify.app)
+- Current host: Netlify
+- Current state: frontend prototype with local API support during development
 
-The MVP centers on:
+## Why it matters
 
-- manual upload of Semgrep, Gitleaks, and Trivy reports in JSON or SARIF
-- scan run tracking and raw artifact preservation
-- finding normalization into a shared schema
-- ASVS 5.0.0 requirement mapping
-- triage, assignment, comments, and due dates
-- suppression rules with expiration and auditability
-- dashboards for severity, aging, status, scanner mix, and ASVS coverage
-- CSV export and a sample GitHub Actions ingestion path
+Security tools usually answer only one question: "What did the scanner find?"
 
-## Architecture at a glance
+Real teams need answers to harder questions:
 
-```text
-CI / User Upload
-        |
-        v
-  API ingest endpoint
-        |
-        v
-  raw artifact storage (S3/MinIO)
-        |
-        v
-  queue-backed parsing worker
-        |
-        v
-  normalization + fingerprinting + ASVS mapping
-        |
-        v
-  PostgreSQL findings, occurrences, workflow state
-        |
-        v
-  dashboards, repo views, triage workflows, exports
+- Which findings are new?
+- Which ones are real risk versus noise?
+- Who owns the fix?
+- How old is the issue?
+- What standard or control does it affect?
+- Are we getting better over time?
+
+AppSec Workbench is designed around those questions.
+
+## Who it is for
+
+- Application Security Engineers who triage, tune, and track findings
+- Security Analysts who review severity, trends, and remediation progress
+- Developers and engineering leads who need clear ownership and fix guidance
+- Managers who want a risk view without reading raw scan reports
+
+## What you can see today
+
+The current prototype includes:
+
+- a multi-page React interface
+- light and dark mode
+- dashboard and findings views
+- an interactive findings workflow
+- local API-backed status, owner, comment, and history updates
+- Netlify deployment for the frontend
+
+The current live site is frontend-first. The full ingestion pipeline and production-style backend architecture are still part of the implementation roadmap below.
+
+## Product idea in one diagram
+
+```mermaid
+flowchart LR
+    A["Semgrep / Gitleaks / Trivy"] --> B["Ingest scan artifact"]
+    B --> C["Normalize into one finding model"]
+    C --> D["Map to OWASP ASVS"]
+    D --> E["Triage and assign"]
+    E --> F["Track remediation"]
+    F --> G["Report risk and trends"]
 ```
 
-The most important modeling decision is separating:
+## How the full platform would work
 
-- scan runs
-- raw artifacts
-- canonical findings
-- finding occurrences
-- workflow state and history
-- ASVS reference data and mapping links
+```mermaid
+flowchart TD
+    U["Developer or CI pipeline"] --> I["Upload JSON or SARIF artifact"]
+    I --> S["Store raw artifact"]
+    S --> Q["Queue parsing job"]
+    Q --> P["Tool-specific parser"]
+    P --> N["Normalized finding contract"]
+    N --> M["ASVS mapping engine"]
+    M --> D["Database"]
+    D --> W["Workbench UI"]
+    W --> T["Status, assignment, comments, suppressions"]
+    D --> R["Metrics, trends, exports"]
+```
 
-That keeps remediation history intact while still letting the product deduplicate noisy re-detections.
+## How a finding moves through the system
 
-## Tech stack
+```mermaid
+flowchart LR
+    A["New finding appears"] --> B["Deduplicate and store"]
+    B --> C["AppSec triage"]
+    C --> D["Assign owner"]
+    D --> E["Developer remediation"]
+    E --> F["Verification"]
+    F --> G["Fixed / Reopened / Risk accepted / Suppressed"]
+```
 
-- Frontend: React, Vite, TypeScript, TanStack Query, Tailwind CSS, shadcn/ui
-- Backend: NestJS, Prisma, PostgreSQL, Redis, BullMQ
-- Storage: S3-compatible artifacts via MinIO in local development
-- Testing: Vitest and Playwright
-- Tooling: pnpm workspaces and Turborepo
+## Implementation workflow
 
-## Current repository contents
+This is the clearest way to think about building the full product from the current prototype:
 
-- [`apps/api`](./apps/api): NestJS + Prisma API slice with a live `GET /api/findings` endpoint
-- [`apps/web`](./apps/web): local React + Vite prototype for the product direction
-- [`docs/netlify.md`](./docs/netlify.md): Netlify setup for the frontend monorepo deployment
-- [`docs/cloudflare-pages.md`](./docs/cloudflare-pages.md): Cloudflare Pages setup for the frontend prototype
-- [`render.yaml`](./render.yaml): Render Blueprint for the current hosted prototype shape
-- [`prisma/schema.prisma`](./prisma/schema.prisma): core database schema for the MVP domain
-- [`docs/architecture.md`](./docs/architecture.md): system boundaries, lifecycle, and modeling notes
-- [`docs/mvp-plan.md`](./docs/mvp-plan.md): practical week-by-week delivery plan
-- [`docs/render-deploy.md`](./docs/render-deploy.md): Render deployment notes for the current prototype
-- [`docker-compose.yml`](./docker-compose.yml): local Postgres, Redis, and MinIO services
+```mermaid
+flowchart TD
+    P1["Phase 1: Product foundation"] --> P2["Phase 2: Projects, repos, and auth"]
+    P2 --> P3["Phase 3: Artifact upload and scan runs"]
+    P3 --> P4["Phase 4: Parser adapters and normalization"]
+    P4 --> P5["Phase 5: Findings workflow"]
+    P5 --> P6["Phase 6: ASVS mapping and reporting"]
+    P6 --> P7["Phase 7: Worker jobs, storage, and integrations"]
+```
 
-## Local product preview
+### Phase 1: Product foundation
 
-The repository now includes a browser preview of the product direction under `apps/web`.
+- define the data model
+- create the monorepo structure
+- establish frontend and backend conventions
 
-1. Install web dependencies with `cd apps/web && npm install`.
-2. Install API dependencies with `cd apps/api && npm install`.
-3. Create the local API demo database with `npm run db:setup` inside `apps/api`.
-4. Start the API with `npm run dev` inside `apps/api`, or run `npm run dev:api` from the repo root.
-5. Start the preview with `npm run dev` inside `apps/web`, or run `npm run dev:web` from the repo root.
-6. Open the local URL printed by Vite, usually `http://127.0.0.1:5173` in dev mode.
+### Phase 2: Projects, repos, and auth
 
-The preview is still product-focused, but the `Findings` screen now attempts a live call to the NestJS API and falls back to local demo data if the API is not running.
+- local auth and RBAC
+- organizations, projects, and repositories
+- ownership and access model
 
-## Cloudflare Pages deployment
+### Phase 3: Artifact upload and scan runs
 
-For a no-credit-card hosting path, the frontend can be deployed from [`apps/web`](./apps/web) to Cloudflare Pages.
+- upload reports manually
+- create scan run records
+- preserve raw artifacts and metadata
 
-- Git integration settings are documented in [`docs/cloudflare-pages.md`](./docs/cloudflare-pages.md).
-- The frontend now includes a Cloudflare-specific direct-upload script:
+### Phase 4: Parser adapters and normalization
+
+- parse Semgrep, Gitleaks, and Trivy outputs
+- normalize them into one shared schema
+- create fingerprints and dedupe logic
+
+### Phase 5: Findings workflow
+
+- findings list and detail pages
+- status updates
+- assignment
+- comments and history
+- suppressions and exceptions
+
+### Phase 6: ASVS mapping and reporting
+
+- load ASVS 5.0.0 requirements
+- map findings to requirements
+- add dashboards, trends, export views, and coverage analysis
+
+### Phase 7: Worker jobs, storage, and integrations
+
+- background parsing
+- Redis and BullMQ
+- object storage
+- API-based ingestion
+- Jira, GitHub Actions, and notification integrations
+
+## Current technical architecture
+
+- Frontend: React, Vite, TypeScript, React Router
+- Backend prototype: NestJS + Prisma
+- Main database target: PostgreSQL
+- Worker target: Redis + BullMQ
+- Object storage target: S3-compatible storage
+- Deployment today: Netlify for the frontend
+
+## Repository map
+
+- [`apps/web`](./apps/web): frontend prototype and current deployed experience
+- [`apps/api`](./apps/api): local API slice for findings workflow
+- [`prisma/schema.prisma`](./prisma/schema.prisma): long-term main database model
+- [`docs/architecture.md`](./docs/architecture.md): architecture notes
+- [`docs/mvp-plan.md`](./docs/mvp-plan.md): implementation roadmap
+- [`docs/netlify.md`](./docs/netlify.md): Netlify deployment notes
+- [`netlify.toml`](./netlify.toml): Netlify monorepo build configuration
+
+## Run locally
+
+### Frontend only
 
 ```bash
-CLOUDFLARE_PAGES_PROJECT_NAME=appsec-workbench-web npm run deploy:cloudflare:web
+cd apps/web
+npm install
+npm run dev
 ```
 
-- React Router fallback is handled by [`apps/web/public/_redirects`](./apps/web/public/_redirects).
+### Frontend + local API
 
-## Netlify deployment
+```bash
+cd apps/api
+npm install
+npm run db:setup
+npm run dev
+```
 
-The repo is also configured for Netlify frontend deployment through the root [`netlify.toml`](./netlify.toml).
+In a second terminal:
 
-- Setup notes: [`docs/netlify.md`](./docs/netlify.md)
-- Preview deploy: `npm run deploy:netlify:web`
-- Production deploy: `npm run deploy:netlify:web:prod`
+```bash
+cd apps/web
+npm install
+npm run dev
+```
 
-## Render deployment
+## Deploy on Netlify
 
-The repo includes a Render Blueprint in [`render.yaml`](./render.yaml) for the current prototype:
+This repo is configured for Netlify frontend deployment.
 
-- static site for `apps/web`
-- Node web service for `apps/api`
-- persistent disk-backed seeded SQLite demo database for the API
+- Base directory: `apps/web`
+- Build command: `npm run build`
+- Publish directory: `dist`
 
-Deployment notes and caveats are documented in [`docs/render-deploy.md`](./docs/render-deploy.md).
+More detail is in [`docs/netlify.md`](./docs/netlify.md).
 
-## Domain model highlights
+## What is implemented vs planned
 
-The schema is built around a few deliberate choices:
+### Implemented now
 
-- `findings` store the canonical identity of a recurring issue
-- `finding_occurrences` preserve every detection event from every scan run
-- `scan_artifacts` keep raw evidence so parsers can be improved without losing source data
-- `finding_status_history`, `finding_assignments`, and `finding_comments` capture the human workflow
-- `suppression_rules` support both exact and rule/path-based exceptions
-- `asvs_requirements` and `finding_asvs_links` keep reference data separate from scanner-specific logic
+- product UI and navigation
+- findings workflow prototype
+- local API for finding detail and updates
+- Netlify-ready frontend deployment
 
-## Local development foundation
+### Planned next
 
-1. Copy `.env.example` to `.env`.
-2. Start local dependencies with `docker compose up -d`.
-3. Install root dependencies with your preferred package manager once the full monorepo apps are scaffolded.
-4. For the current UI prototype, install only the web preview dependencies with `cd apps/web && npm install`.
-5. Validate the schema with `npx prisma@6.6.0 validate --schema prisma/schema.prisma`.
-6. Generate Prisma client with `npx prisma@6.6.0 generate --schema prisma/schema.prisma`.
+- real scan ingestion
+- scanner-specific parsers
+- ASVS seed loader and mapping engine
+- project and repository CRUD
+- background workers
+- production-style persistence and reporting
 
-The web app, API, worker, and seed scripts are intentionally not scaffolded yet in this initial foundation commit. The next implementation pass should create the NestJS API, the React frontend, and the parser adapters on top of the schema in this repo.
+## Project goal
 
-## Recommended next build sequence
+The goal is not just to build a nice dashboard. The goal is to show the full thinking behind a serious AppSec product:
 
-1. Scaffold the monorepo apps and shared packages.
-2. Add local auth, sessions, and RBAC middleware.
-3. Build project and repository CRUD on top of Prisma.
-4. Implement scan upload and artifact storage.
-5. Add Semgrep, Gitleaks, and Trivy parser adapters.
-6. Build findings list, finding detail, and triage workflow UI.
-7. Add ASVS seeding plus rule-to-requirement mapping logic.
-8. Finish dashboards, exports, demo data, and GitHub Actions ingestion.
+- data modeling
+- workflow design
+- security operations context
+- developer experience
+- technical implementation strategy
 
-## Product qualities this repo is aiming for
-
-- realistic AppSec workflow instead of a scanner wrapper
-- clean, typed contracts between ingest, normalization, and reporting
-- operational history that survives repeated scans and status changes
-- portfolio-ready product framing with room for production-style polish
-
-## Supporting docs
-
-- [`docs/architecture.md`](./docs/architecture.md)
-- [`docs/mvp-plan.md`](./docs/mvp-plan.md)
+That is what makes AppSec Workbench a stronger portfolio project than a simple scanner wrapper.
