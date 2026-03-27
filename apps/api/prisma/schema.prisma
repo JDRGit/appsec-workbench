@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("API_DATABASE_URL")
+}
+
+enum Scanner {
+  SEMGREP
+  GITLEAKS
+  TRIVY
+}
+
+enum FindingSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum FindingStatus {
+  NEW
+  TRIAGED
+  IN_PROGRESS
+  FIXED
+  RISK_ACCEPTED
+  FALSE_POSITIVE
+  SUPPRESSED
+  REOPENED
+}
+
+enum FindingEventType {
+  COMMENT
+  STATUS_CHANGE
+  ASSIGNMENT
+}
+
+model Repository {
+  id       String    @id
+  fullName String    @unique
+  findings Finding[]
+}
+
+model Finding {
+  id                 String          @id
+  scanner            Scanner
+  severityNormalized FindingSeverity
+  currentStatus      FindingStatus
+  title              String
+  description        String?
+  canonicalFilePath  String?
+  firstSeenAt        DateTime        @default(now())
+  remediationText    String?
+  ownerName          String?
+  asvsRequirementKey String?
+  repositoryId       String
+  repository         Repository      @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  events             FindingEvent[]
+
+  @@index([severityNormalized])
+  @@index([currentStatus])
+}
+
+model FindingEvent {
+  id        String           @id
+  findingId String
+  eventType FindingEventType
+  actorName String
+  body      String
+  oldValue  String?
+  newValue  String?
+  createdAt String
+  finding   Finding          @relation(fields: [findingId], references: [id], onDelete: Cascade)
+
+  @@index([findingId, createdAt])
+}

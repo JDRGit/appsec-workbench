@@ -1,0 +1,441 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuthProvider {
+  LOCAL
+  GITHUB
+}
+
+enum MembershipRole {
+  ADMIN
+  APPSEC_ENGINEER
+  SECURITY_ANALYST
+  DEVELOPER
+  VIEWER
+}
+
+enum BusinessCriticality {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RepositoryProvider {
+  GITHUB
+  GITLAB
+  MANUAL
+}
+
+enum Scanner {
+  SEMGREP
+  GITLEAKS
+  TRIVY
+}
+
+enum ScannerType {
+  SAST
+  SECRETS
+  SCA
+  MISCONFIG
+  LICENSE
+  MIXED
+}
+
+enum ScanTriggerSource {
+  MANUAL
+  API
+  CI
+}
+
+enum ScanRunStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum ArtifactFormat {
+  JSON
+  SARIF
+}
+
+enum FindingSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum ConfidenceLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum FindingStatus {
+  NEW
+  TRIAGED
+  IN_PROGRESS
+  FIXED
+  RISK_ACCEPTED
+  FALSE_POSITIVE
+  SUPPRESSED
+  REOPENED
+}
+
+enum SuppressionMatchType {
+  FINGERPRINT
+  RULE_PATH
+  RULE_ONLY
+}
+
+enum MappingSource {
+  MANUAL
+  RULE_CATALOG
+  HEURISTIC
+  ANALYST_OVERRIDE
+}
+
+model User {
+  id                   String               @id @default(uuid()) @db.Uuid
+  email                String               @unique
+  name                 String?
+  authProvider         AuthProvider         @default(LOCAL)
+  passwordHash         String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  memberships          Membership[]
+  createdScanRuns      ScanRun[]            @relation("ScanRunCreatedBy")
+  findingComments      FindingComment[]
+  assignmentsReceived  FindingAssignment[]  @relation("FindingAssignedTo")
+  assignmentsGiven     FindingAssignment[]  @relation("FindingAssignedBy")
+  statusChanges        FindingStatusHistory[]
+  suppressionsApproved SuppressionRule[]    @relation("SuppressionApprovedBy")
+  suppressionsCreated  SuppressionRule[]    @relation("SuppressionCreatedBy")
+  auditLogs            AuditLog[]
+
+  @@map("users")
+}
+
+model Organization {
+  id         String      @id @default(uuid()) @db.Uuid
+  name       String
+  slug       String      @unique
+  createdAt  DateTime    @default(now())
+  memberships Membership[]
+  projects   Project[]
+  auditLogs  AuditLog[]
+
+  @@map("organizations")
+}
+
+model Membership {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @db.Uuid
+  userId         String         @db.Uuid
+  role           MembershipRole
+  createdAt      DateTime       @default(now())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model Project {
+  id                  String               @id @default(uuid()) @db.Uuid
+  organizationId      String               @db.Uuid
+  name                String
+  slug                String
+  description         String?
+  businessCriticality BusinessCriticality?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  repositories        Repository[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("projects")
+}
+
+model Repository {
+  id              String              @id @default(uuid()) @db.Uuid
+  projectId       String              @db.Uuid
+  provider        RepositoryProvider?
+  externalRepoId  String?
+  name            String
+  fullName        String
+  defaultBranch   String?
+  primaryLanguage String?
+  internetFacing  Boolean             @default(false)
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  project         Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scanRuns        ScanRun[]
+  findings        Finding[]
+  suppressionRules SuppressionRule[]
+
+  @@index([projectId])
+  @@index([fullName])
+  @@map("repositories")
+}
+
+model ScanRun {
+  id              String            @id @default(uuid()) @db.Uuid
+  repositoryId    String            @db.Uuid
+  scanner         Scanner
+  scannerMode     ScannerType?
+  branch          String?
+  commitSha       String?
+  triggerSource   ScanTriggerSource @default(MANUAL)
+  status          ScanRunStatus     @default(QUEUED)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  parserError     String?
+  createdByUserId String?           @db.Uuid
+  createdAt       DateTime          @default(now())
+  repository      Repository        @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  createdByUser   User?             @relation("ScanRunCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  artifacts       ScanArtifact[]
+  findingsAsLastScan Finding[]      @relation("FindingLastScanRun")
+  occurrences     FindingOccurrence[]
+
+  @@index([repositoryId, status])
+  @@index([createdAt])
+  @@map("scan_runs")
+}
+
+model ScanArtifact {
+  id          String         @id @default(uuid()) @db.Uuid
+  scanRunId   String         @db.Uuid
+  fileName    String
+  contentType String?
+  format      ArtifactFormat
+  storageKey  String
+  sha256      String
+  sizeBytes   BigInt?
+  createdAt   DateTime       @default(now())
+  scanRun     ScanRun        @relation(fields: [scanRunId], references: [id], onDelete: Cascade)
+
+  @@index([scanRunId])
+  @@map("scan_artifacts")
+}
+
+model Finding {
+  id                 String            @id @default(uuid()) @db.Uuid
+  repositoryId       String            @db.Uuid
+  scanner            Scanner
+  scannerType        ScannerType
+  externalRuleId     String
+  title              String
+  description        String?
+  severityNormalized FindingSeverity
+  severityRaw        String?
+  confidence         ConfidenceLevel?
+  cweIds             String[]          @default([])
+  cveIds             String[]          @default([])
+  referenceUrls      String[]          @default([])
+  repoPath           String?
+  fingerprint        String
+  canonicalFilePath  String?
+  remediationText    String?
+  currentStatus      FindingStatus     @default(NEW)
+  firstSeenAt        DateTime          @default(now())
+  lastSeenAt         DateTime          @default(now())
+  lastScanRunId      String?           @db.Uuid
+  isMuted            Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  repository         Repository        @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  lastScanRun        ScanRun?          @relation("FindingLastScanRun", fields: [lastScanRunId], references: [id], onDelete: SetNull)
+  occurrences        FindingOccurrence[]
+  assignments        FindingAssignment[]
+  comments           FindingComment[]
+  statusHistory      FindingStatusHistory[]
+  sla                FindingSla?
+  asvsLinks          FindingAsvsLink[]
+
+  @@unique([repositoryId, scanner, fingerprint])
+  @@index([repositoryId, currentStatus])
+  @@index([severityNormalized, scannerType])
+  @@index([lastSeenAt])
+  @@map("findings")
+}
+
+model FindingOccurrence {
+  id         String   @id @default(uuid()) @db.Uuid
+  findingId  String   @db.Uuid
+  scanRunId  String   @db.Uuid
+  filePath   String?
+  startLine  Int?
+  endLine    Int?
+  commitSha  String?
+  branch     String?
+  evidence   Json?
+  rawPayload Json
+  detectedAt DateTime @default(now())
+  finding    Finding  @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  scanRun    ScanRun  @relation(fields: [scanRunId], references: [id], onDelete: Cascade)
+
+  @@index([findingId])
+  @@index([scanRunId])
+  @@map("finding_occurrences")
+}
+
+model FindingAssignment {
+  id               String   @id @default(uuid()) @db.Uuid
+  findingId        String   @db.Uuid
+  assignedToUserId String?  @db.Uuid
+  assignedByUserId String?  @db.Uuid
+  assignedAt       DateTime @default(now())
+  unassignedAt     DateTime?
+  finding          Finding  @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  assignedToUser   User?    @relation("FindingAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  assignedByUser   User?    @relation("FindingAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([findingId, unassignedAt])
+  @@index([assignedToUserId])
+  @@map("finding_assignments")
+}
+
+model FindingComment {
+  id           String   @id @default(uuid()) @db.Uuid
+  findingId    String   @db.Uuid
+  authorUserId String   @db.Uuid
+  body         String
+  createdAt    DateTime @default(now())
+  finding      Finding  @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  authorUser   User     @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([findingId, createdAt])
+  @@map("finding_comments")
+}
+
+model FindingStatusHistory {
+  id              String         @id @default(uuid()) @db.Uuid
+  findingId       String         @db.Uuid
+  oldStatus       FindingStatus?
+  newStatus       FindingStatus
+  reason          String?
+  changedByUserId String?        @db.Uuid
+  changedAt       DateTime       @default(now())
+  finding         Finding        @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  changedByUser   User?          @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([findingId, changedAt])
+  @@map("finding_status_history")
+}
+
+model FindingSla {
+  id        String   @id @default(uuid()) @db.Uuid
+  findingId String   @unique @db.Uuid
+  dueDate   DateTime? @db.Date
+  breached  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  finding   Finding  @relation(fields: [findingId], references: [id], onDelete: Cascade)
+
+  @@map("finding_slas")
+}
+
+model SuppressionRule {
+  id               String               @id @default(uuid()) @db.Uuid
+  repositoryId     String               @db.Uuid
+  scanner          Scanner
+  matchType        SuppressionMatchType
+  externalRuleId   String?
+  fileGlob         String?
+  fingerprint      String?
+  reason           String
+  expiresAt        DateTime?
+  approved         Boolean              @default(false)
+  approvedByUserId String?              @db.Uuid
+  createdByUserId  String?              @db.Uuid
+  createdAt        DateTime             @default(now())
+  repository       Repository           @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  approvedByUser   User?                @relation("SuppressionApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  createdByUser    User?                @relation("SuppressionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([repositoryId, scanner])
+  @@index([expiresAt])
+  @@map("suppression_rules")
+}
+
+model RuleCatalog {
+  id                  String          @id @default(uuid()) @db.Uuid
+  scanner             Scanner
+  externalRuleId      String
+  title               String?
+  category            String?
+  cweIds              String[]        @default([])
+  defaultSeverity     FindingSeverity?
+  remediationGuidance String?
+  referenceData       Json?
+  metadata            Json?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@unique([scanner, externalRuleId])
+  @@map("rule_catalog")
+}
+
+model AsvsRequirement {
+  id              String            @id @default(uuid()) @db.Uuid
+  version         String
+  requirementKey  String
+  chapter         String
+  section         String
+  requirementCode String
+  title           String?
+  description     String
+  level           Int?
+  sourceUrl       String?
+  findingLinks    FindingAsvsLink[]
+
+  @@unique([version, requirementKey])
+  @@index([chapter])
+  @@map("asvs_requirements")
+}
+
+model FindingAsvsLink {
+  id                String          @id @default(uuid()) @db.Uuid
+  findingId         String          @db.Uuid
+  asvsRequirementId String          @db.Uuid
+  mappingSource     MappingSource
+  confidence        ConfidenceLevel
+  createdAt         DateTime        @default(now())
+  finding           Finding         @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  asvsRequirement   AsvsRequirement @relation(fields: [asvsRequirementId], references: [id], onDelete: Cascade)
+
+  @@unique([findingId, asvsRequirementId])
+  @@index([asvsRequirementId])
+  @@map("finding_asvs_links")
+}
+
+model AuditLog {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String?       @db.Uuid
+  actorUserId    String?       @db.Uuid
+  action         String
+  entityType     String
+  entityId       String?       @db.Uuid
+  details        Json?
+  createdAt      DateTime      @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actorUser      User?         @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

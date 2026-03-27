@@ -1,0 +1,31 @@
+# dependencies
+node_modules
+
+# build output
+dist
+build
+coverage
+.turbo
+
+# environment
+.env
+.env.local
+.env.*.local
+
+# logs
+*.log
+pnpm-debug.log*
+
+# generated clients and local storage
+apps/**/.vite
+apps/**/playwright-report
+apps/**/test-results
+apps/api/prisma/dev.db
+apps/api/prisma/dev.db-journal
+tmp
+.DS_Store
+
+# object storage and database files
+.minio
+postgres-data
+redis-data
