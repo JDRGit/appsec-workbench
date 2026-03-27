@@ -76,6 +76,7 @@ That keeps remediation history intact while still letting the product deduplicat
 
 - [`apps/api`](./apps/api): NestJS + Prisma API slice with a live `GET /api/findings` endpoint
 - [`apps/web`](./apps/web): local React + Vite prototype for the product direction
+- [`docs/netlify.md`](./docs/netlify.md): Netlify setup for the frontend monorepo deployment
 - [`docs/cloudflare-pages.md`](./docs/cloudflare-pages.md): Cloudflare Pages setup for the frontend prototype
 - [`render.yaml`](./render.yaml): Render Blueprint for the current hosted prototype shape
 - [`prisma/schema.prisma`](./prisma/schema.prisma): core database schema for the MVP domain
@@ -109,6 +110,14 @@ CLOUDFLARE_PAGES_PROJECT_NAME=appsec-workbench-web npm run deploy:cloudflare:web
 ```
 
 - React Router fallback is handled by [`apps/web/public/_redirects`](./apps/web/public/_redirects).
+
+## Netlify deployment
+
+The repo is also configured for Netlify frontend deployment through the root [`netlify.toml`](./netlify.toml).
+
+- Setup notes: [`docs/netlify.md`](./docs/netlify.md)
+- Preview deploy: `npm run deploy:netlify:web`
+- Production deploy: `npm run deploy:netlify:web:prod`
 
 ## Render deployment
 

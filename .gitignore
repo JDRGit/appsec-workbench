@@ -24,6 +24,7 @@ apps/api/prisma/dev.db
 apps/api/prisma/dev.db-journal
 tmp
 .DS_Store
+.netlify
 
 # object storage and database files
 .minio
