@@ -1,10 +1,23 @@
 # AppSec Workbench
 
-[Live demo](https://appsec-workbench.netlify.app)
+Portfolio-grade application security operations platform concept for triage, ownership, remediation, suppression, and reporting.
 
-AppSec Workbench is a security operations product concept for software teams. It takes raw findings from scanners like Semgrep, Gitleaks, and Trivy, turns them into one shared workflow, and helps teams decide what to fix first, who owns it, and how it maps to OWASP ASVS 5.0.0.
+[Live demo](https://appsec-workbench.netlify.app) · [Architecture notes](./docs/architecture.md) · [Implementation plan](./docs/mvp-plan.md)
 
-In plain language: this project is meant to feel like the kind of internal security dashboard an engineering organization would actually use, not just a page that shows scanner output.
+AppSec Workbench is a security workflow product concept for software teams. It takes raw findings from Semgrep, Gitleaks, and Trivy, turns them into one shared operating view, and helps teams decide what to fix first, who owns it, what can be suppressed, and how each issue maps to OWASP ASVS 5.0.0.
+
+In plain language: this project is designed to feel like the kind of internal security dashboard an engineering organization would actually use, not just a page that prints scanner results.
+
+## At a glance
+
+| Area | Summary |
+| --- | --- |
+| Problem | Security findings are often spread across tools, formats, and teams with no shared workflow. |
+| Product idea | One workbench for scanner ingestion, triage, assignment, remediation tracking, suppression, and reporting. |
+| Inputs | Semgrep, Gitleaks, and Trivy reports in JSON or SARIF. |
+| Users | AppSec engineers, analysts, developers, engineering leads, and managers. |
+| Current state | Netlify-hosted frontend prototype with a local NestJS API slice for development. |
+| Goal | Demonstrate product thinking, AppSec workflow design, and full-stack engineering in one project. |
 
 ## What this project is
 
@@ -18,6 +31,14 @@ In plain language: this project is meant to feel like the kind of internal secur
 - Public frontend: [https://appsec-workbench.netlify.app](https://appsec-workbench.netlify.app)
 - Current host: Netlify
 - Current state: frontend prototype with local API support during development
+
+## Key capabilities
+
+- unify findings from multiple security scanners into one queue
+- normalize heterogeneous outputs into a shared finding model
+- map findings to OWASP ASVS 5.0.0
+- support triage, assignment, comments, and history
+- track remediation progress and reporting views over time
 
 ## Why it matters
 
